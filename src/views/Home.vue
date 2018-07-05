@@ -122,10 +122,10 @@
 				console.log('submit!');
 			},
 			handleopen() {
-				console.log('handleopen');
+				
 			},
 			handleclose() {
-				console.log('handleclose');
+				
 			},
 			handleselect: function (a, b) {
 			},
@@ -139,7 +139,6 @@
 						this.$confirm('确认修改吗？', '提示', {}).then(() => {
 							this.addLoading = true;
 							let params = Object.assign({}, this.modifyForm);
-							console.log(params);
 							let para = {
 								id: sessionStorage.getItem('id'),
 								password: params.password
@@ -200,7 +199,6 @@
 				this.sysUserAvatar = user.avatar || '';
 			}
 			routerMenu().then((res) => {
-				console.log(res);
                 sessionStorage.setItem('id', res.data.curUser.id);
 				this.sysUserName = res.data.curUser.realname;
 				this.menuList = res.data.resources;

@@ -50,12 +50,22 @@ export const getBasicInfo = params => { return axios.get(`${base}/zzjj-cloudap-w
 
 export const getCurInfo = params => { return axios.get(`${base}/zzjj-cloudap-web/role/findById.do`, { params: params }).then(res => res.data); };
 
+export const getManageInfo = params => { return axios.get(`${base}/zzjj-cloudap-web/adminuser/findById.do`, { params: params }).then(res => res.data); };
+
 export const getSign = params => { return axios.post(`${YZY}/v2/user_auth`, params).then(res => res.data); };
 
 export const uploadAction = (params, config) => { return axios.post(`${base}/zzjj-cloudap-web/qrcode/analysisQrcode.do`, params, config).then(res => res.data); };
 
-export const hostBinding = (params, config) => { return axios.post(`${YZY}/v2/user/`+sessionStorage.getItem('user_id')+`/qrcode_subscribe`, params, config).then(res => res.data); };
+export const hostBinding = (params, config) => { return axios.post(`${YZY}/v2/user/`+ sessionStorage.getItem('user_id') +`/qrcode_subscribe`, params, config).then(res => res.data); };
+
+export const getDevices = config => { return axios.get(`${YZY}/v2/user/`+ sessionStorage.getItem('user_id') +`/subscribe/devices`, config).then(res => res.data); };
+
+export const delHost = (params, config) => { return axios.post(`${YZY}/v2/user/`+ sessionStorage.getItem('user_id') +`/unsubscribe`, params, config).then(res => res.data); };
+
+export const delLocalHost = params => { return axios.post(`${base}/zzjj-cloudap-web/deivce/deleteById.do`, Qs.stringify(params)).then(res => res.data); };
 
 export const bindingDevice = params => { return axios.post(`${base}/zzjj-cloudap-web/device/addSave.do`, Qs.stringify(params)).then(res => res.data); };
 
 export const getAuthorityList = params => { return axios.get(`${base}/zzjj-cloudap-web/resource/getResourceList.do`).then(res => res.data); };
+
+export const getAuthoritys = params => { return axios.get(`${base}/zzjj-cloudap-web/role/getRoleList.do`).then(res => res.data); };

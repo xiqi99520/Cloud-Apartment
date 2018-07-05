@@ -31,7 +31,7 @@
 			</el-table-column>
 			<el-table-column label="操作" width="200">
 				<template scope="scope">
-					<el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+					<el-button size="small" @click="getManageInfo(scope.$index, scope.row)">编辑</el-button>
 					<el-button v-if="!scope.row.status" type="warning" size="small" @click="toggle(scope.$index, scope.row)">禁用</el-button>
 					<el-button v-if="scope.row.status" type="primary" size="small" @click="toggle(scope.$index, scope.row)">启用</el-button>
 					<el-button type="danger" size="small" @click="handleDel(scope.$index, scope.row)">删除</el-button>
@@ -55,12 +55,17 @@
 				<el-form-item label="手机" prop="mobile">
 					<el-input v-model="editForm.mobile" auto-complete="off"></el-input>
 				</el-form-item>
+				<el-form-item label="状态">
+					<el-radio-group v-model="editForm.status" @change="handleRadioStatusChange">
+						<el-radio :label="1">禁用</el-radio>
+					    <el-radio :label="0">启用</el-radio>
+					</el-radio-group>
+				</el-form-item>
 				<el-form-item label="角色权限" prop="authority">
-				    <el-checkbox-group v-model="checkboxGroup" size="mini">
-				      <el-checkbox label="备选项1" border></el-checkbox>
-				      <el-checkbox label="备选项2" border></el-checkbox>
+				    <el-checkbox-group v-model="editForm.roleUserEntitys" size="mini" @change="handleRoleListChange">
+				      <el-checkbox v-for="item in roleList" :label="item.id" border>{{ item.roleName }}</el-checkbox>
 				    </el-checkbox-group>
-				  </el-form-item>
+				</el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
 				<el-button @click.native="editFormVisible = false">取消</el-button>
@@ -83,17 +88,16 @@
 					<el-input v-model="addForm.psw" auto-complete="off"></el-input>
 				</el-form-item>
 				<el-form-item label="状态">
-					<el-radio-group v-model="addForm.radio">
-						<el-radio class="radio" :label="1">禁用</el-radio>
-						<el-radio class="radio" :label="0">启用</el-radio>
+					<el-radio-group v-model="radio" @change="handleRadioStatusChange">
+						<el-radio :label="1">禁用</el-radio>
+					    <el-radio :label="0">启用</el-radio>
 					</el-radio-group>
 				</el-form-item>
 				<el-form-item label="角色权限" prop="authority">
-				    <el-checkbox-group v-model="checkboxGroup" size="mini">
-				      <el-checkbox label="备选项1" border></el-checkbox>
-				      <el-checkbox label="备选项2" border></el-checkbox>
+				    <el-checkbox-group v-model="checkboxGroup" size="mini" @change="handleRoleListChange">
+				      <el-checkbox v-for="item in roleList" :label="item.id" border>{{ item.roleName }}</el-checkbox>
 				    </el-checkbox-group>
-				  </el-form-item>
+				</el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
 				<el-button @click.native="addFormVisible = false">取消</el-button>
@@ -105,9 +109,7 @@
 
 <script>
 	import util from '../../common/js/util'
-	//import NProgress from 'nprogress'
-	import { getUserListPage, removeUser, batchRemoveUser, editUser, addUser, getAdminList, toggleFunc } from '../../api/api';
-
+	import { getUserListPage, removeUser, batchRemoveUser, editUser, addUser, getAdminList, toggleFunc, getAuthoritys, getManageInfo } from '../../api/api';
 	export default {
 		data() {
 			return {
@@ -118,7 +120,7 @@
 				users: [],
 				total: 0,
 				page: 1,
-				radio: 1,
+				radio: 0,
 				listLoading: false,
 				sels: [],//列表选中列
 				type1: [],
@@ -144,7 +146,8 @@
 					age: 0,
 					birth: '',
 					addr: '',
-					authority: ''
+					authority: '',
+					roleUserEntitys: []
 				},
 
 				addFormVisible: false,//新增界面是否显示
@@ -157,10 +160,12 @@
 				//新增界面数据
 				addForm: {
 					name: '',
-					radio: 0,
+					radio: [0],
 					authority: ''
 				},
-				menuList: ''
+				roleList: [],
+				choicedMenu: [],
+				radioStatus: 0,
 			}
 		},
 		methods: {
@@ -172,6 +177,12 @@
 				this.page = val;
 				this.getUsers();
 			},
+			handleRoleListChange(value) {
+		        this.choicedMenu = value.join();
+		    },
+		    handleRadioStatusChange(value){
+		    	this.radioStatus = value;
+		    },
 			//获取用户列表
 			getUsers() {
 				let para = {
@@ -185,6 +196,35 @@
 					res.data.rows.map(item => {
 						this.users.push(item);
 					})
+					this.listLoading = false;
+				});
+			},
+			getAuthority(){
+				this.listLoading = true;
+				getAuthoritys().then((res) => {
+					util.across(this, res);
+					this.roleList.length = 0;
+					res.data.map(item => {
+						this.roleList.push(item);
+					})
+					this.listLoading = false;
+				});
+			},
+			//显示编辑界面
+			getManageInfo(index, row){
+				this.listLoading = true;
+				this.editLoading = true;
+				let params = {
+					id: row.id
+				}
+				getManageInfo(params).then((res) => {
+					util.across(this, res);
+					this.editForm.id = res.entity.id;
+					this.editForm.mobile = res.entity.mobile;
+					this.editForm.realname = res.entity.realname;
+					this.editForm.status = res.entity.status;
+					this.editLoading = false;
+					this.editFormVisible = true;
 					this.listLoading = false;
 				});
 			},
@@ -244,11 +284,6 @@
 
 				});
 			},
-			//显示编辑界面
-			handleEdit: function (index, row) {
-				this.editFormVisible = true;
-				this.editForm = Object.assign({}, row);
-			},
 			//显示新增界面
 			handleAdd: function () {
 				this.addFormVisible = true;
@@ -267,10 +302,14 @@
 						this.$confirm('确认提交吗？', '提示', {}).then(() => {
 							this.editLoading = true;
 							let params = Object.assign({}, this.editForm);
+							console.log(params);
 							let para = {
 								id: params.id,
-								realName: params.realname,
-								mobile: params.mobile
+								realname: params.realname,
+								mobile: params.mobile,
+								password: params.psw,
+								status: this.radioStatus,
+								roles: this.choicedMenu
 							};
 							editUser(para).then((res) => {
 								util.across(this, res);
@@ -299,7 +338,8 @@
 								realname: params.realname,
 								mobile: params.mobile,
 								password: params.psw,
-								status: params.radio
+								status: this.radioStatus,
+								roles: this.choicedMenu
 							}
 							addUser(para).then((res) => {
 								util.across(this, res);
@@ -343,6 +383,7 @@
 		},
 		mounted() {
 			this.getUsers();
+			this.getAuthority();
 		}
 	}
 
