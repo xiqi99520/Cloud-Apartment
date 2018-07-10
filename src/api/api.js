@@ -69,3 +69,9 @@ export const bindingDevice = params => { return axios.post(`${base}/zzjj-cloudap
 export const getAuthorityList = params => { return axios.get(`${base}/zzjj-cloudap-web/resource/getResourceList.do`).then(res => res.data); };
 
 export const getAuthoritys = params => { return axios.get(`${base}/zzjj-cloudap-web/role/getRoleList.do`).then(res => res.data); };
+
+export const checkOneDayRecord = params => { return axios.post(`${base}/zzjj-app/sensorreport/selectByDay.do`, Qs.stringify(params)).then(res => res.data); };
+
+export const checkOneMonthRecord = params => { return axios.post(`${base}/zzjj-app/sensorreport/selectByMonth.do`, Qs.stringify(params)).then(res => res.data); };
+
+export const checkOneYearRecord = params => { return axios.post(`${base}/zzjj-app/sensorreport/selectByYear.do`, Qs.stringify(params)).then(res => res.data); };

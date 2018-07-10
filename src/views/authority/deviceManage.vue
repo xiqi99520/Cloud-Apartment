@@ -12,7 +12,7 @@
 			  	<span>未绑定，<a href="javascript:void(0)" @click="startBinding">请绑定</a></span>
 			  </el-col>
 			  <el-col :span="19">
-			  	<el-col v-if="deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="4" @click.native="delDeviceHost($event)" id="160fa2b44f472711160fa2b44f479601">
+			  	<el-col v-if="deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="3" @click.native="delDeviceHost($event)" id="160fa2b44f472711160fa2b44f479601">
 			  		<span class="close-area">
 			  			<img :src="closepic" alt="">
 			  		</span>
@@ -40,15 +40,21 @@
 			  		<img :src="doorpic" alt="">
 			  	</div>
 			  </el-col>
-			  <el-col :span="7" v-if="!isBinding">
-			  	<span>未绑定，<a href="javascript:void(0)" @click="startBinding">请绑定</a></span>
+			  <el-col :span="7" v-if="!doorLockStatus || !deviceManageObj['160fa2b44f472711160fa2b44f479601']">
+			  	<span>未绑定，<a href="javascript:void(0)" @click="startBindingDoorLock">请绑定</a></span>
 			  </el-col>
 			  <el-col :span="19">
-			  	<el-col v-if="isBinding" class="grid-content pull-right" :span="4">
+			  	<el-col v-if="doorLockStatus && deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="3"  @click.native="cancelLock">
 			  		<span class="close-area">
 			  			<img :src="closepic" alt="">
 			  		</span>
 			  		<p class="cancel-binding">解绑</p>
+			  	</el-col>
+			  	<el-col v-if="doorLockStatus && deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="3"  @click.native="openDoorControl">
+			  		<span class="close-area">
+			  			<img :src="opendoor" alt="">
+			  		</span>
+			  		<p class="cancel-binding">开门</p>
 			  	</el-col>
 			  </el-col>
 			</el-row>
@@ -61,15 +67,27 @@
 			  		<img :src="watermeterpic" alt="">
 			  	</div>
 			  </el-col>
-			  <el-col :span="7" v-if="!isBinding">
-			  	<span>未绑定，<a href="javascript:void(0)" @click="startBinding">请绑定</a></span>
+			  <el-col :span="7" v-if="!waterMeterStatus || !deviceManageObj['160fa2b44f472711160fa2b44f479601']">
+			  	<span>未绑定，<a href="javascript:void(0)" @click="startBindingDoorLock">请绑定</a></span>
 			  </el-col>
 			  <el-col :span="19">
-			  	<el-col v-if="isBinding" class="grid-content pull-right" :span="4">
+			  	<el-col v-if="waterMeterStatus && deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="3" @click.native="OneYearRecord">
 			  		<span class="close-area">
-			  			<img :src="closepic" alt="">
+			  			<img :src="opendoor" alt="">
 			  		</span>
-			  		<p class="cancel-binding">解绑</p>
+			  		<p class="cancel-binding">1年记录</p>
+			  	</el-col>
+			  	<el-col v-if="waterMeterStatus && deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="3" @click.native="OneMonthRecord">
+			  		<span class="close-area">
+			  			<img :src="opendoor" alt="">
+			  		</span>
+			  		<p class="cancel-binding">7天记录</p>
+			  	</el-col>
+			  	<el-col v-if="waterMeterStatus && deviceManageObj['160fa2b44f472711160fa2b44f479601']" class="grid-content pull-right cancelBinding" :span="3" @click.native="OneDayRecord">
+			  		<span class="close-area">
+			  			<img :src="opendoor" alt="">
+			  		</span>
+			  		<p class="cancel-binding">1天记录</p>
 			  	</el-col>
 			  </el-col>
 			</el-row>
@@ -101,7 +119,7 @@
 <script>
 	import util from '../../common/js/util'
 	//import NProgress from 'nprogress'
-	import { getUserListPage, removeUser, houseRemoveUser, batchRemoveHouse, editHouse, addHouse, getHouseList, toggleFunc, getBasicInfo, getSign, uploadAction, hostBinding, bindingDevice, getDevices, delHost, delLocalHost } from '../../api/api';
+	import { getUserListPage, removeUser, houseRemoveUser, batchRemoveHouse, addHouse, getHouseList, toggleFunc, getBasicInfo, getSign, uploadAction, hostBinding, bindingDevice, getDevices, delHost, delLocalHost, checkOneDayRecord, checkOneMonthRecord, checkOneYearRecord } from '../../api/api';
 
 	export default {
 		data() {
@@ -118,6 +136,7 @@
 				airswitchpic: require('../../assets/device/airswitch.png'),
 				watermeterpic: require('../../assets/device/watermeter.png'),
 				closepic: require('../../assets/device/deletedevice.svg'),
+				opendoor: require('../../assets/device/opendoor.svg'),
 				users: [],
 				total: 0,
 				page: 1,
@@ -134,7 +153,16 @@
 				devices: [],
 				ws: null,
 				socketObj: null,//当前设备的类
-				devicesList: []
+				devicesList: [],
+				eqUl: [],
+				publicEqUl: [],
+				eqLen: '',
+				YzyEqUl: [],
+				baseScene: [],
+				emergencyValue: null,
+				allLocalDevice: JSON.parse(localStorage.getItem('allBindingDevice')),
+				doorLockStatus: '',
+				waterMeterStatus: ''
 			}
 		},
 		methods: {
@@ -232,6 +260,7 @@
 				});
 			},
 			getAllDevices(){
+				let _this  = this;
 				let config = {
 					headers: { 'Access-Token': sessionStorage.getItem('access_token') }
 				}
@@ -241,7 +270,7 @@
 						this.productObj[item.product_id] = item.id;
 						this.deviceManageObj[item.product_id] = 1;
 					})
-					this.devices = res.map((item) => {
+					this.devices = res.map(item => {
                         return {
                             device_id: item.id.toString(),
                             device_name: item.name,
@@ -250,11 +279,20 @@
                         }
                     });
                     if(res.length>0){
-                    	this.SetCookie("hostId", res[0].id);
+                    	localStorage.setItem("hostId", res[0].id);
                     }
+                    /*else{
+                    	this.$message({
+							message: '主机被其他人员绑定了',
+							type: 'error'
+						});
+						localStorage.removeItem('allBindingDevice');
+						setTimeout(function(){
+							_this.$router.push('/house');
+						},800)
+                    }*/
 					localStorage.setItem('productObj',JSON.stringify(this.productObj));
 					this.initSdk();
-					this.bindingLoading = false;
 				});
 				
 			},
@@ -312,7 +350,7 @@
 	                console.log(error);
 	            })
 	        },
-	        setHostType(res){
+	       /* setHostType(res){
 	        	let _this = this;
 	            let param = {
 	                deviceId: res.id || '',
@@ -332,7 +370,7 @@
                         _this.$router.go(0);
                     }, 1500);
 	            })
-	        },
+	        },*/
 	        addYzyEq(data) {
 	            let _this = this;
 	            let params = {
@@ -344,7 +382,14 @@
 	            }
 	            hostBinding(newparams, config).then(res => {
 
-                	_this.setHostType(res);
+                	// _this.setHostType(res);
+                	this.$message({
+						message: '成功添加设备',
+						type: 'success'
+					});
+                    setTimeout(function() {
+                        _this.$router.go(0);
+                    }, 1500);
 
 	            }).catch(error => {
 	            	if(error.response.app_result_key == 1) return;
@@ -386,33 +431,11 @@
 	                }
             	})
 	        },
-	        SetCookie(obj, cvalue) {
-	            let name = cvalue.cname;
-	            let value = cvalue.cvalue;
-	            let days = cvalue.exdays;
-	            let d = new Date();
-	            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-	            let expires = "expires=" + d.toGMTString();
-	            document.cookie = encodeURI(name) + "=" + encodeURI(value) + ";" + expires + "; path=/";
-	        },
-	        GetCookie(obj, data) {
-	            let cvalue = data.cvalue;
-	            let name = encodeURI(cvalue) + "=";
-	            let ca = document.cookie.split(';');
-	            for (let i = 0; i < ca.length; i++) {
-	                let c = ca[i].trim();
-	                if (c.indexOf(cvalue) == 0) {
-	                    this.state.cookieVals[cvalue] = c.substring(cvalue.length + 1, c.length);
-	                    return;
-	                }
-	            }
-	            return "";
-	        },
 	        getToken() {
 	            let _this = this;
 	            this.commit('GetCookie', { cvalue: 'user_id' });
 	            this.commit('GetCookie', { cvalue: 'access_token' });
-	            if (_this.state.cookieVals.user_id) {
+	            if (localStorage.getItem(user_id)) {
 	                let params = {
 	                    email: '2018030619252147527@sslj.com',
 	                    corp_id: '100fa4b41cb5c000',
@@ -420,14 +443,14 @@
 	                };
 	                let curParams = JSON.stringify(params);
 	                let config = {
-	                    'Access-Token': _this.state.cookieVals.access_token
+	                    'Access-Token': localStorage.getItem(access_token)
 	                };
 	                this.$axios.post('/v2/user_auth', curParams, config).then(response => {
 	                    if (response.status == 200) {
-	                        _this.SetCookie("access_token", response.data.access_token);
-	                        _this.SetCookie("refresh_token", response.data.refresh_token);
-	                        _this.SetCookie("user_id", response.data.user_id);
-	                        _this.SetCookie("authorize", response.data.authorize);
+	                        localStorage.setItem("access_token", response.data.access_token);
+	                        localStorage.setItem("refresh_token", response.data.refresh_token);
+	                        localStorage.setItem("user_id", response.data.user_id);
+	                        localStorage.setItem("authorize", response.data.authorize);
 	                        _this.getAllDevices();
 	                    } else {
 
@@ -442,7 +465,7 @@
 	        //sdk发送数据
 	        changeSdkMsg(msg){
 	        	let _this = this;
-	        	console.log(_this);
+	        	console.log('msg',msg);
 				var dataArr = [{
 			        index: 1, // 数据端点索引
 			        value: msg, // 数据端点值
@@ -453,28 +476,149 @@
 			        data: dataArr
 			    }, function(res) {
 			        if (res.status === 0) {
-
+			        	console.log('sdk发送数据成功');
 			        } else {
 			            alert("发送失败,状态:" + res.status)
 			        }
 			    });
 			},
-			getSend() {
+			//获取场景
+			/*getSend() {
 	            let _this = this;
-	            let SN = _this.GetCookie("SN");
+	            let SN = localStorage.getItem("SN");
 	            let opValue = `0800${SN}FE90`;
 	            this.changeSdkMsg(opValue);
-	        },
+	        },*/
 	        //获取所有设备
 	        getSdkEqMsg() {
-	            var opValue="080049982E11FE81";
-				if(!GetCookie("SN")){
+	            var opValue;
+				if(!localStorage.getItem("SN")){
 					opValue="0800FFFFFFFFFE81";
+				}else{
+					opValue=`0800${localStorage.getItem("SN")}FE81`;
 				}
 				this.changeSdkMsg(opValue);
 	        },
-	        initSdk(){
+	        //控制门锁密码加密方式
+	        encryptionPassword(password){
+		    	let passwordKey = [0x42, 0x42, 0x49, 0x46, 0x43, 0x44, 0x46, 0x48, 0x45];//支持9位数密码  加密值我们定义 9个大于0x40值
+		        let encryptionPassword = [];
+		        for (let i = 0; i < password.length; i++) {
+		            encryptionPassword.push(passwordKey[i] ^ password[i]);
+		        }
+		        return encryptionPassword;
+		    },
+	        //允许入网，绑定门锁设备
+	        startBindingDoorLock(){
+	        	this.changeSdkMsg(`0800${localStorage.getItem("SN")}FE9F`);
+	        },
+	       	//开锁
+			openDoorControl(){
+				let IEEE, Endpoint, shortAddress;
+	        	JSON.parse(localStorage.getItem('allBindingDevice')).map(item => {
+	        		if(item.name == '门锁'){
+	        			IEEE = item.IEEE;
+	        			Endpoint = item.Endpoint;
+	        			shortAddress = item.shortAddress;
+	        		}
+	        	})
+				this.$prompt('请输入开门密码', '提示', {
+		          confirmButtonText: '确定',
+		          cancelButtonText: '取消'
+		        }).then(({ value }) => {
+		        	let reg = /^\d{8}$/;
+		        	if(reg.test(value)){
+		        		let final = '';
+		        		this.encryptionPassword(value).map(item => {
+		        			final+=item.toString(16).toUpperCase();
+		        		})
+
+		        		this.changeSdkMsg(`1F00${localStorage.getItem('SN')}FE821602${shortAddress}000000000000${Endpoint}00000108${final}`);
+
+		        	}else{
+		        		this.$message({
+				            type: 'error',
+				            message: '请输入正确密码'
+				        });  
+		        	}
+		        }).catch(() => {
+		          this.$message({
+		            type: 'info',
+		            message: '取消输入'
+		          });       
+		        });
+			},
+	        //删除门锁设备
+	        cancelLock() {
+	        	let IEEE, Endpoint, shortAddress;
+	        	JSON.parse(localStorage.getItem('allBindingDevice')).map(item => {
+	        		if(item.name == '门锁'){
+	        			IEEE = item.IEEE;
+	        			Endpoint = item.Endpoint;
+	        			shortAddress = item.shortAddress;
+	        		}
+	        	})
+	        	this.$message({
+					message: "解绑门锁成功",
+					type: 'success'
+				});
+	        	this.changeSdkMsg(`1500${localStorage.getItem('SN')}FE950C02${shortAddress + IEEE + Endpoint}`);
+	        	localStorage.removeItem('allBindingDevice');
+	        	setTimeout(function() {
+                    location.reload();
+                }, 1500);
+	        },
+	        //查看一天的智能水表记录
+	        OneDayRecord(){
+	        	let params = {
+				    "deviceId": '0053',
+				    "shortAddress":"FD1E",
+				    "endpoint" : "01",
+				    "clusterId": '0702',
+				    "attribId": '0000'
+				}
+				// let para = JSON.stringify(params);
+	        	checkOneDayRecord(params).then(res => {
+	                console.log(res);
+	            }).catch(error => {
+	                console.log(error);
+	            })
+	        },
+	        //查看一周的智能水表记录
+	        OneMonthRecord(){
+	        	let params = {
+				    "deviceId": '0053',
+				    "shortAddress":"FD1E",
+				    "endpoint" : "01",
+				    "clusterId": '0702',
+				    "attribId": '0000'
+				}
+	        	checkOneMonthRecord(params).then(res => {
+	                console.log(res);
+	            }).catch(error => {
+	                console.log(error);
+	            })
+	        },
+	        //查看一年的智能水表记录
+	        OneYearRecord(){
+	        	let params = {
+				    "deviceId": '0053',
+				    "shortAddress":"FD1E",
+				    "endpoint" : "01",
+				    "clusterId": '0702',
+				    "attribId": '0000'
+				}
+				// let para = JSON.stringify(params);
+	        	checkOneYearRecord(params).then(res => {
+	                console.log(res);
+	            }).catch(error => {
+	                console.log(error);
+	            })
+	        },
+	        initSdk() {
 	        	let _this = this;
+
+	            this.bindingLoading = false;
 				_this.ws = new XSDK('mqtt', {
 					type: 'app',
 					host: 'ws://118.190.126.197:1884/mqtt',
@@ -484,24 +628,359 @@
 				});
 
 				_this.ws.on('ready', function() {
-					console.log('成功连上了');
 					_this.ws && _this.ws.emit('adddevices', _this.devices) //_devices 表示用户绑定设备列表
+					console.log('成功连上了');
 				});
 
 				_this.ws.on('devicesready', function(devicesArray) {
-	                console.log(devicesArray[0]);
-	                _this.state.socketObj = devicesArray[0];
+	                _this.socketObj = devicesArray[0];
 	                _this.changeSdkMsg('0800FFFFFFFFFE9D');
 	                _this.getListen();
-	                _this.getSend();
+	                _this.getSdkEqMsg();
+	                _this.socketObj.on('data', function(data) {
+			        	if (data.type === 'datapoint') {
+			            	var ableData=data.data[0].value;
+			            	var type=ableData.substring(0,2);
+			            	switch(type){
+				            	case "15":
+				            		var SN = ableData.substring(14,22);
+				                	localStorage.setItem("SN",SN);
+				            		break; 
+				            	case "70":
+				            		_this.emergency(ableData);
+				            		break;
+				            	case "01":
+				          			var shortAddress=ableData.substring(4,8);
+						      		var Endpoint=ableData.substring(8,10);
+						      		var DeviceId=ableData.substring(14,18);
+						      		var statu=ableData.substring(18,20);
+						      		var nameLength=parseInt(ableData.substring(20,22),16);
+						      		var name=ableData.substring(22,nameLength*2+22);
+						      		var online=ableData.substring(nameLength*2+22,nameLength*2+24);
+						      		var m = _this.prePro(name);
+						      		var czName= !m ? '' : decodeURI(m);
+						      		var IEEE=ableData.substring(nameLength*2+24,nameLength*2+40);
+						      		var SNLength=parseInt(ableData.substring(nameLength*2+40,nameLength*2+42),16);
+						      		var eqSN=ableData.substring(nameLength*2+42,(nameLength+SNLength)*2+42);
+						      		var ZoneType=ableData.substring((nameLength+SNLength)*2+42,(nameLength+SNLength)*2+46);
+						      		var des="";
+						      		if(statu==0){
+						      			des="关";
+						      		}else{
+						      			des="开";
+						      		}
+						      		var eqLi=[{
+						      				"shortAddress":shortAddress,
+						      				"DeviceId":DeviceId.substring(2,4)+DeviceId.substring(0,2),
+						      				"name":czName,
+						      				"statu":statu,
+						      				"online":online,
+						      				"Endpoint":Endpoint,
+						      				"IEEE":IEEE,
+						      				"ZoneType":ZoneType.substring(2,4)+ZoneType.substring(0,2),
+						      				"toUrl":"",
+						      				"all":ableData,
+						      				"des":des,
+						      				"click":0,
+						      				"eqSN":eqSN,
+						      				"onSrc":"../../../src/resource/images/index/air_pre.png",
+						      				"offSrc":"../../../src/resource/images/index/air_nor.png"
+						      		}];
+						      		_this.eqUl.map(function(item,index){
+						      			if(item.Endpoint==Endpoint && item.IEEE==IEEE){
+						      				item.shortAddress=shortAddress;
+						      				item.DeviceId=DeviceId.substring(2,4)+DeviceId.substring(0,2);
+						      				item.name=czName;
+						      				item.statu=statu;
+						      				item.online=online;
+						      				item.all=ableData;
+						      				item.ZoneType=ZoneType.substring(2,4)+ZoneType.substring(0,2);
+						      				eqLi=null;
+						      			}
+						      		});
+						      		if(eqLi != null){
+						      			_this.eqUl=_this.eqUl.concat(eqLi);
+						      		}
+						      		_this.eqUl = _this.addToUrl(_this.eqUl);
+						      		_this.publicEqUl = _this.eqUl;
+						      		console.log(_this.eqUl);
+						      		break;
+				            	default:
+				            		break;
+			            	}
+			            }
+			        });
 	            })
-			}
+			},
+			//监听云智易数据上报
+	        getListen() {
+	            let _this = this;
+	            _this.socketObj.on('data', function(data) {
+	                if (data.type === 'datapoint') {
+	                    let eqLi,
+	                        shortAddress,
+	                        Endpoint,
+	                        DeviceId,
+	                        status,
+	                        nameLength,
+	                        name,
+	                        online,
+	                        m,
+	                        czName,
+	                        IEEE,
+	                        SNLength,
+	                        eqSN,
+	                        ZoneType,
+	                        des,
+	                        id,
+	                        equipments = [];
+	                    let ableData = data.data[0].value;
+	                    let type = ableData.substring(0, 2);
+	                    console.log('类型1：',type);
+	                    switch (type) {
+	                        case "15":
+	                            break;
+	                        case "07":
+	                            shortAddress = ableData.substring(4, 8);
+	                            Endpoint = ableData.substring(8, 10);
+	                            status = ableData.substring(10, 12);
+	                            _this.YzyEqUl.map(function(item, index) {
+	                                if (shortAddress == item.shortAddress && Endpoint == item.Endpoint) {
+	                                    item.status = status;
+	                                    if (item.status == "00") {
+	                                        item.des = "关";
+	                                    } else {
+	                                        item.des = "开";
+	                                    }
+	                                }
+	                            });
+	                            break;
+	                        case "01":
+	                            shortAddress = ableData.substring(4, 8);
+	                            Endpoint = ableData.substring(8, 10);
+	                            DeviceId = ableData.substring(14, 18);
+	                            status = ableData.substring(18, 20);
+	                            nameLength = parseInt(ableData.substring(20, 22), 16);
+	                            name = ableData.substring(22, nameLength * 2 + 22);
+	                            online = ableData.substring(nameLength * 2 + 22, nameLength * 2 + 24);
+	                            // m = _this.commit('prePro', { name: name });
+	                            czName = !m ? '' : decodeURI(m);
+	                            IEEE = ableData.substring(nameLength * 2 + 24, nameLength * 2 + 40);
+	                            SNLength = parseInt(ableData.substring(nameLength * 2 + 40, nameLength * 2 + 42), 16);
+	                            eqSN = ableData.substring(nameLength * 2 + 42, (nameLength + SNLength) * 2 + 42);
+	                            ZoneType = ableData.substring((nameLength + SNLength) * 2 + 42, (nameLength + SNLength) * 2 + 46);
+	                            des = "";
+	                            if (status == 0) {
+	                                des = "关";
+	                            } else {
+	                                des = "开";
+	                            }
+
+	                            eqLi = [{
+	                                "shortAddress": shortAddress,
+	                                "DeviceId": DeviceId.substring(2, 4) + DeviceId.substring(0, 2),
+	                                "name": czName,
+	                                "status": status,
+	                                "online": online,
+	                                "Endpoint": Endpoint,
+	                                "IEEE": IEEE,
+	                                "ZoneType": ZoneType.substring(2, 4) + ZoneType.substring(0, 2),
+	                                "toUrl": "",
+	                                "all": ableData,
+	                                "des": des,
+	                                "click": 0,
+	                                "eqSN": eqSN,
+	                                "trans": false,
+	                                "onSrc": "",
+	                                "offSrc": ""
+	                            }];
+	                            _this.eqUl.map(function(item, index) {
+	                                if (item.Endpoint == Endpoint && item.IEEE == IEEE) {
+	                                    item.shortAddress = shortAddress;
+	                                    item.DeviceId = DeviceId.substring(2, 4) + DeviceId.substring(0, 2);
+	                                    item.name = czName;
+	                                    item.status = status;
+	                                    item.online = online;
+	                                    item.all = ableData;
+	                                    item.ZoneType = ZoneType.substring(2, 4) + ZoneType.substring(0, 2);
+	                                    eqLi = null;
+	                                }
+	                            });
+
+	                            if (eqLi == null || (DeviceId.substring(2, 4) + DeviceId.substring(0, 2)) == "0000" || DeviceId == "0400") {} else {
+	                                _this.addToUrl(eqLi);
+	                            }
+	                            break;
+	                        case "0E":
+	                            id = ableData.substring(4, 8);
+	                            nameLength = parseInt(ableData.substring(8, 10), 16);
+	                            name = ableData.substring(10, nameLength * 2 + 10);
+	                            m = _this.prePro(name);
+	                            czName = !m ? '' : decodeURI(m);
+	                            eqLi = [{
+	                                'id': id,
+	                                'name': czName,
+	                                'orderBy': 999
+	                            }];
+	                            break;
+	                        default:
+	                            break;
+	                    }
+	                }
+	            });
+	        },
+	        emergency(ableData) {
+	        	let _this = this;
+	            setTimeout(function() {
+	                _this.emergencyValue = true;
+	            }, 1000);
+	            if (_this.emergencyValue == false) {
+	                return false;
+	            }
+	            _this.emergencyValue = false;
+	            var shortAddress = ableData.slice(4, 8);
+	            var cluster = ableData.slice(10, 14);
+	            var type = ableData.slice(16, 20);
+	            var value = ableData.slice(22, 26);
+	            var trueValue = value.slice(2, 4) + value.slice(0, 2);
+	            var doorOpen = ableData.slice(24, 26);
+	            var doorStatu = ableData.slice(26, 28);
+	            if (cluster == "0101") {
+	                var interType = ableData.slice(20, 22);
+	                if (interType == "42") {
+	                    var interPassType = ableData.slice(24, 28);
+	                    var interPassStatu = ableData.slice(28);
+	                    if (interPassType.toString() == "0") {
+	                        if (interPassStatu.toString() == "0") {
+	                            /*SetCookie("doorDate", GetCookie("doorDateF"), 10);
+	                            SetCookie("doorTime", GetCookie("doorTimeF"), 10);
+	                            SetCookie("doorPassword", GetCookie("doorPasswordF"), 10);*/
+	                        } else {
+	                            alert("临时密码获取失败，请重新获取！");
+	                        }
+	                    }
+	                    if (interPassStatu == "FFFF") {
+	                        if (interPassStatu.toString() == "0") {
+	                            localStorage.setItem("doorDate", "");
+	                            localStorage.setItem("doorTime", "");
+	                        }
+	                    }
+	                }
+	                // clearTimeout(doorTimer);
+	                if (doorStatu == "00") {
+	                    if (doorOpen == "00") {
+	                        _this.$message({
+								message: "关锁成功",
+								type: 'success'
+							});
+	                    }
+	                    if (doorOpen == "01") {
+	                        _this.$message({
+								message: "开锁成功",
+								type: 'success'
+							});
+	                    }
+	                } else if (doorStatu == "01") {
+	                    _this.$message({
+							message: "门锁操作失败",
+							type: 'success'
+						});
+	                } else if (doorStatu == "02" || doorStatu == "7f") {
+	                    _this.$message({
+							message: "远程开门未允许",
+							type: 'success'
+						});
+	                } else {
+	                    _this.$message({
+							message: '门锁绑定成功',
+							type: 'success'
+						});
+						setTimeout(function() {
+		                    location.reload();
+		                }, 1500);
+	                }
+	            }
+	            _this.publicEqUl.map(function(item, index) {
+	                if (item.shortAddress == shortAddress) {
+	                    switch (item.DeviceId) {
+	                        case "0402":
+	                            switch (item.ZoneType) {
+	                                case "0015":
+	                                    if (item.value == "0000") {} else {
+	                                        _this.$message({
+												message: '门被打开',
+												type: 'success'
+											});
+	                                    }
+	                                    break;
+	                                default:
+	                                    if (item.value == "0000") {
+	                                        item.desc = "关";
+	                                    } else {
+	                                        item.desc = "开";
+	                                    }
+	                                    break;
+	                            }
+	                            break;
+	                        default:
+	                            break;
+	                    }
+	                }
+	            });
+	        },
+	        //设备名字转码
+	        prePro(data) {
+	            if (data.length % 2) return '';
+	            let tmp = '';
+	            for (let i = 0; i < data.length; i += 2) {
+	                tmp += '%' + data.charAt(i) + data.charAt(i + 1);
+	            }
+	            return tmp;
+	        },
+	        addToUrl(data) {
+	            let _this = this;
+	            data.map(function(item, index) {
+	                switch (item.DeviceId) {
+	                    case "000A":
+	                        if (!item.name) {
+	                            item.name = "门锁";
+	                        }
+	                        if (item.online == "00") {
+	                            item.des = "不在线";
+	                        }
+	                    case "0053":
+	                        if (!item.name) {
+	                            item.name = "水表";
+	                        }
+	                    default:
+	                        break;
+	                }
+	                if (!_this.eqUl && item.name) {
+	                    _this.eqUl.push(item);
+	                }
+	                localStorage.setItem('allBindingDevice', JSON.stringify(_this.eqUl));
+	            });
+	            _this.eqLen = _this.eqUl.length;
+	            localStorage.setItem("eqLength", _this.eqUl.length);
+	            return _this.eqUl;
+	        }
 		},
 		mounted() {
 			this.getUsers();
 			this.getUserPsw();
-			if(JSON.parse(localStorage.getItem('productObj'))){
-				this.initSdk();
+			if(localStorage.getItem('allBindingDevice') != null){
+				JSON.parse(localStorage.getItem('allBindingDevice')).map(item => {
+					if(item.name == '门锁'){
+						this.doorLockStatus = true;
+					} else {
+						this.doorLockStatus = false;
+					}
+					if(item.name == '水表'){
+						this.waterMeterStatus = true;
+					} else {
+						this.waterMeterStatus = false;
+					}
+				});
 			}
 		}
 	}

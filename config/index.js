@@ -35,6 +35,13 @@ module.exports = {
               '^/zzjj-cloudap-web': '/zzjj-cloudap-web'
             }
           },
+          '/zzjj-app': {
+            target: 'http://localhost:8080',
+            changeOrigin: true,
+            pathRewrite: {
+              '^/zzjj-app': '/zzjj-app'
+            }
+          },
           '/v2': {
             target: 'http://118.190.121.138',
             changeOrigin: true,
